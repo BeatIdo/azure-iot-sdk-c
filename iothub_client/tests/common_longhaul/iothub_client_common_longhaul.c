@@ -439,12 +439,12 @@ static IOTHUBMESSAGE_DISPOSITION_RESULT on_c2d_message_received(IOTHUB_MESSAGE_H
 
                 if (info.time_received == INDEFINITE_TIME)
                 {
-                    LogError("Failed setting the receive time for c2d message %lu", (unsigned long)info.message_id);
+                    LogError("Failed setting the receive time for c2d message %zu", info.message_id);
                 }
 
                 if (iothub_client_statistics_add_c2d_info(iotHubLonghaul->iotHubClientStats, C2D_RECEIVED, &info) != 0)
                 {
-                    LogError("Failed adding receive info for c2d message %lu", (unsigned long)info.message_id);
+                    LogError("Failed adding receive info for c2d message %zu", info.message_id);
                 }
 
                 result = IOTHUBMESSAGE_ACCEPTED;
@@ -491,12 +491,12 @@ static int on_device_method_received(const char* method_name, const unsigned cha
 
             if (info.time_received == INDEFINITE_TIME)
             {
-                LogError("Failed setting the receive time for method %lu", (unsigned long)info.method_id);
+                LogError("Failed setting the receive time for method %zu", info.method_id);
             }
 
             if (iothub_client_statistics_add_device_method_info(iotHubLonghaul->iotHubClientStats, DEVICE_METHOD_RECEIVED, &info) != 0)
             {
-                LogError("Failed adding receive info for method %lu", (unsigned long)info.method_id);
+                LogError("Failed adding receive info for method %zu", info.method_id);
                 result = -1;
             }
             else
@@ -851,7 +851,7 @@ static int on_message_received(void* context, const char* data, size_t size)
 
     if (data == NULL || size == 0)
     {
-        LogError("Invalid message received (data=%s, size=%lu)", data, (unsigned long)size);
+        LogError("Invalid message received (data=%s, size=%zu)", data, size);
         result = __FAILURE__;
     }
     else
@@ -874,7 +874,7 @@ static int on_message_received(void* context, const char* data, size_t size)
 
             if (iothub_client_statistics_add_telemetry_info(iotHubLonghaul->iotHubClientStats, TELEMETRY_RECEIVED, &info) != 0)
             {
-                LogError("Failed adding receive info for message %lu", (unsigned long)info.message_id);
+                LogError("Failed adding receive info for message %zu", info.message_id);
                 result = __FAILURE__;
             }
             else
@@ -1231,12 +1231,12 @@ static void on_c2d_message_sent(void* context, IOTHUB_MESSAGING_RESULT messaging
 
         if (info.time_sent == INDEFINITE_TIME)
         {
-            LogError("Failed setting the send time for message %lu", (unsigned long)info.message_id);
+            LogError("Failed setting the send time for message %zu", info.message_id);
         }
 
         if (iothub_client_statistics_add_c2d_info(send_context->iotHubLonghaul->iotHubClientStats, C2D_SENT, &info) != 0)
         {
-            LogError("Failed adding send info for c2d message %lu", (unsigned long)info.message_id);
+            LogError("Failed adding send info for c2d message %zu", info.message_id);
         }
 
         free(send_context);
@@ -1523,12 +1523,12 @@ static void check_for_reported_properties_update_on_service_side(IOTHUB_LONGHAUL
 
                 if (info.time_received == INDEFINITE_TIME)
                 {
-                    LogError("Failed setting the receive time for twin update %lu", (unsigned long)info.update_id);
+                    LogError("Failed setting the receive time for twin update %zu", info.update_id);
                 }
 
                 if (iothub_client_statistics_add_device_twin_reported_info(iotHubLonghaul->iotHubClientStats, DEVICE_TWIN_UPDATE_RECEIVED, &info) != 0)
                 {
-                    LogError("Failed adding receive info for twin update %lu", (unsigned long)info.update_id);
+                    LogError("Failed adding receive info for twin update %zu", info.update_id);
                 }
             }
         }
@@ -1653,8 +1653,8 @@ int longhaul_run_telemetry_tests(IOTHUB_LONGHAUL_RESOURCES_HANDLE handle, size_t
                     }
                     else
                     {
-                        LogInfo("Summary: Messages sent=%lu, received=%lu; travel time: min=%f secs, max=%f secs",
-                            (unsigned long)summary.messages_sent, (unsigned long)summary.messages_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
+                        LogInfo("Summary: Messages sent=%zu, received=%zu; travel time: min=%f secs, max=%f secs",
+                            summary.messages_sent, summary.messages_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
 
                         if (summary.messages_sent == 0 || summary.messages_received != summary.messages_sent || summary.max_travel_time_secs > MAX_TELEMETRY_TRAVEL_TIME_SECS)
                         {
@@ -1731,8 +1731,8 @@ int longhaul_run_c2d_tests(IOTHUB_LONGHAUL_RESOURCES_HANDLE handle, size_t itera
                 }
                 else
                 {
-                    LogInfo("Summary: Messages sent=%lu, received=%lu; travel time: min=%f secs, max=%f secs",
-                        (unsigned long)summary.messages_sent, (unsigned long)summary.messages_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
+                    LogInfo("Summary: Messages sent=%zu, received=%zu; travel time: min=%f secs, max=%f secs",
+                        summary.messages_sent, summary.messages_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
 
                     if (summary.messages_sent == 0 || summary.messages_received != summary.messages_sent || summary.max_travel_time_secs > MAX_C2D_TRAVEL_TIME_SECS)
                     {
@@ -1807,8 +1807,8 @@ int longhaul_run_device_methods_tests(IOTHUB_LONGHAUL_RESOURCES_HANDLE handle, s
                 }
                 else
                 {
-                    LogInfo("Summary: Methods invoked=%lu, received=%lu; travel time: min=%f secs, max=%f secs",
-                        (unsigned long)summary.methods_invoked, (unsigned long)summary.methods_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
+                    LogInfo("Summary: Methods invoked=%zu, received=%zu; travel time: min=%f secs, max=%f secs",
+                        summary.methods_invoked, summary.methods_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
 
                     if (summary.methods_invoked == 0 || summary.methods_received != summary.methods_invoked || summary.max_travel_time_secs > MAX_DEVICE_METHOD_TRAVEL_TIME_SECS)
                     {
@@ -1857,7 +1857,7 @@ static void on_device_twin_update_received(DEVICE_TWIN_UPDATE_STATE update_state
 
             if (info.time_received == INDEFINITE_TIME)
             {
-                LogError("Failed setting the receive time for twin update %lu", (unsigned long)info.update_id);
+                LogError("Failed setting the receive time for twin update %zu", info.update_id);
             }
 
             if (Lock(iotHubLonghaul->lock) != LOCK_OK)
@@ -1868,7 +1868,7 @@ static void on_device_twin_update_received(DEVICE_TWIN_UPDATE_STATE update_state
             {
                 if (iothub_client_statistics_add_device_twin_desired_info(iotHubLonghaul->iotHubClientStats, DEVICE_TWIN_UPDATE_RECEIVED, &info) != 0)
                 {
-                    LogError("Failed adding receive info for twin update %lu", (unsigned long)info.update_id);
+                    LogError("Failed adding receive info for twin update %lu", info.update_id);
                 }
 
                 if (Unlock(iotHubLonghaul->lock) != LOCK_OK)
@@ -1939,8 +1939,8 @@ int longhaul_run_twin_desired_properties_tests(IOTHUB_LONGHAUL_RESOURCES_HANDLE 
                 }
                 else
                 {
-                    LogInfo("Summary: Updates sent=%lu, received=%lu; travel time: min=%f secs, max=%f secs",
-                        (unsigned long)summary.updates_sent, (unsigned long)summary.updates_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
+                    LogInfo("Summary: Updates sent=%zu, received=%zu; travel time: min=%f secs, max=%f secs",
+                        summary.updates_sent, summary.updates_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
 
                     if (summary.updates_sent == 0 || summary.updates_received != summary.updates_sent || summary.max_travel_time_secs > MAX_TWIN_DESIRED_PROP_TRAVEL_TIME_SECS)
                     {
@@ -2016,8 +2016,8 @@ int longhaul_run_twin_reported_properties_tests(IOTHUB_LONGHAUL_RESOURCES_HANDLE
                 }
                 else
                 {
-                    LogInfo("Summary: Updates sent=%lu, received=%lu; travel time: min=%f secs, max=%f secs",
-                        (unsigned long)summary.updates_sent, (unsigned long)summary.updates_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
+                    LogInfo("Summary: Updates sent=%zu, received=%zu; travel time: min=%f secs, max=%f secs",
+                        summary.updates_sent, summary.updates_received, summary.min_travel_time_secs, summary.max_travel_time_secs);
 
                     if (summary.updates_sent == 0 || summary.updates_received != summary.updates_sent || summary.max_travel_time_secs > MAX_TWIN_REPORTED_PROP_TRAVEL_TIME_SECS)
                     {
