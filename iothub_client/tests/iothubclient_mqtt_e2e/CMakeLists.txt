@@ -36,6 +36,10 @@ include_directories(${IOTHUB_SERVICE_CLIENT_INC_FOLDER})
 file(COPY ../global_valgrind_suppression.supp DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 build_c_test_artifacts(${theseTestsName} ON "tests/E2ETests" VALGRIND_SUPPRESSIONS_FILE global_valgrind_suppression.supp)
 
+if(${use_sample_trusted_cert})
+    add_definitions(-DSET_TRUSTED_CERT_IN_SAMPLES)
+endif()
+
 if(WIN32)
    if(TARGET ${theseTestsName}_dll)
            target_link_libraries(${theseTestsName}_dll

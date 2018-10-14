@@ -1204,175 +1204,167 @@ static int setMqttMessagePropertyIfPossible(IOTHUB_MESSAGE_HANDLE IoTHubMessage,
 static int extractMqttProperties(IOTHUB_MESSAGE_HANDLE IoTHubMessage, const char* topic_name, bool urldecode)
 {
     int result;
-    STRING_HANDLE mqttTopic = STRING_construct(topic_name);
-    if (mqttTopic == NULL)
+    STRING_TOKENIZER_HANDLE token = STRING_TOKENIZER_create_from_char(topic_name);
+    if (token != NULL)
     {
-        LogError("Failure constructing string topic name.");
-        result = __FAILURE__;
-    }
-    else
-    {
-        STRING_TOKENIZER_HANDLE token = STRING_TOKENIZER_create(mqttTopic);
-        if (token != NULL)
+        MAP_HANDLE propertyMap = IoTHubMessage_Properties(IoTHubMessage);
+        if (propertyMap == NULL)
         {
-            MAP_HANDLE propertyMap = IoTHubMessage_Properties(IoTHubMessage);
-            if (propertyMap == NULL)
+            LogError("Failure to retrieve IoTHubMessage_properties.");
+            result = __FAILURE__;
+        }
+        else
+        {
+            STRING_HANDLE output = STRING_new();
+            if (output == NULL)
             {
-                LogError("Failure to retrieve IoTHubMessage_properties.");
+                LogError("Failure to allocate STRING_new.");
                 result = __FAILURE__;
             }
             else
             {
-                STRING_HANDLE output = STRING_new();
-                if (output == NULL)
-                {
-                    LogError("Failure to allocate STRING_new.");
-                    result = __FAILURE__;
-                }
-                else
-                {
-                    result = 0;
+                result = 0;
 
-                    while (STRING_TOKENIZER_get_next_token(token, output, PROPERTY_SEPARATOR) == 0 && result == 0)
+                while (STRING_TOKENIZER_get_next_token(token, output, PROPERTY_SEPARATOR) == 0 && result == 0)
+                {
+                    const char* tokenData = STRING_c_str(output);
+                    size_t tokenLen = strlen(tokenData);
+                    if (tokenData == NULL || tokenLen == 0)
                     {
-                        const char* tokenData = STRING_c_str(output);
-                        size_t tokenLen = strlen(tokenData);
-                        if (tokenData == NULL || tokenLen == 0)
+                        break;
+                    }
+                    else
+                    {
+                        if (isSystemProperty(tokenData))
                         {
-                            break;
-                        }
-                        else
-                        {
-                            if (isSystemProperty(tokenData))
+                            const char* iterator = tokenData;
+                            while (iterator != NULL && *iterator != '\0' && result == 0)
                             {
-                                const char* iterator = tokenData;
-                                while (iterator != NULL && *iterator != '\0' && result == 0)
+                                if (*iterator == '=')
                                 {
-                                    if (*iterator == '=')
+                                    size_t nameLen = iterator - tokenData;
+                                    char* propName = malloc(nameLen + 1);
+
+                                    size_t valLen = tokenLen - (nameLen + 1) + 1;
+                                    char* propValue = malloc(valLen + 1);
+
+                                    if (propName == NULL || propValue == NULL)
                                     {
-                                        size_t nameLen = iterator - tokenData;
-                                        char* propName = malloc(nameLen + 1);
+                                        LogError("Failed allocating property name (%p) and/or value (%p)", propName, propValue);
+                                        result = __FAILURE__;
+                                    }
+                                    else
+                                    {
+                                        memcpy(propName, tokenData, nameLen);
+                                        propName[nameLen] = '\0';
 
-                                        size_t valLen = tokenLen - (nameLen + 1) + 1;
-                                        char* propValue = malloc(valLen + 1);
+                                        memcpy(propValue, iterator + 1, valLen);
+                                        propValue[valLen] = '\0';
 
-                                        if (propName == NULL || propValue == NULL)
+                                        if (urldecode)
                                         {
-                                            LogError("Failed allocating property name (%p) and/or value (%p)", propName, propValue);
-                                            result = __FAILURE__;
+                                            STRING_HANDLE propValue_decoded;
+                                            if ((propValue_decoded = URL_DecodeString(propValue)) == NULL)
+                                            {
+                                                LogError("Failed to URL decode property value");
+                                                result = __FAILURE__;
+                                            }
+                                            else if (setMqttMessagePropertyIfPossible(IoTHubMessage, propName, STRING_c_str(propValue_decoded), nameLen) != 0)
+                                            {
+                                                LogError("Unable to set message property");
+                                                result = __FAILURE__;
+                                            }
+                                            STRING_delete(propValue_decoded);
                                         }
                                         else
                                         {
-                                            memcpy(propName, tokenData, nameLen);
-                                            propName[nameLen] = '\0';
-
-                                            memcpy(propValue, iterator + 1, valLen);
-                                            propValue[valLen] = '\0';
-
-                                            if (urldecode)
+                                            if (setMqttMessagePropertyIfPossible(IoTHubMessage, propName, propValue, nameLen) != 0)
                                             {
-                                                STRING_HANDLE propValue_decoded;
-                                                if ((propValue_decoded = URL_DecodeString(propValue)) == NULL)
-                                                {
-                                                    LogError("Failed to URL decode property value");
-                                                    result = __FAILURE__;
-                                                }
-                                                else if (setMqttMessagePropertyIfPossible(IoTHubMessage, propName, STRING_c_str(propValue_decoded), nameLen) != 0)
-                                                {
-                                                    LogError("Unable to set message property");
-                                                    result = __FAILURE__;
-                                                }
-                                                STRING_delete(propValue_decoded);
-                                            }
-                                            else
-                                            {
-                                                if (setMqttMessagePropertyIfPossible(IoTHubMessage, propName, propValue, nameLen) != 0)
-                                                {
-                                                    LogError("Unable to set message property");
-                                                    result = __FAILURE__;
-                                                }
+                                                LogError("Unable to set message property");
+                                                result = __FAILURE__;
                                             }
                                         }
-                                        free(propName);
-                                        free(propValue);
-
-                                        break;
                                     }
-                                    iterator++;
+                                    free(propName);
+                                    free(propValue);
+
+                                    break;
                                 }
+                                iterator++;
                             }
-                            else //User Properties
+                        }
+                        else //User Properties
+                        {
+                            const char* iterator = tokenData;
+                            while (iterator != NULL && *iterator != '\0' && result == 0)
                             {
-                                const char* iterator = tokenData;
-                                while (iterator != NULL && *iterator != '\0' && result == 0)
+                                if (*iterator == '=')
                                 {
-                                    if (*iterator == '=')
+                                    char* propName;
+                                    char* propValue;
+
+                                    size_t nameLen = iterator - tokenData;
+                                    size_t valLen = tokenLen - (nameLen + 1) + 1;
+
+                                    if ((propName = (char*)malloc(nameLen + 1)) == NULL || (propValue = (char*)malloc(valLen + 1)) == NULL)
                                     {
-                                        size_t nameLen = iterator - tokenData;
-                                        char* propName = malloc(nameLen + 1);
+                                        free(propName);
+                                        LogError("Failed allocating property information");
+                                        result = __FAILURE__;
+                                    }
+                                    else
+                                    {
+                                        memcpy(propName, tokenData, nameLen);
+                                        propName[nameLen] = '\0';
 
-                                        size_t valLen = tokenLen - (nameLen + 1) + 1;
-                                        char* propValue = malloc(valLen + 1);
+                                        memcpy(propValue, iterator + 1, valLen);
+                                        propValue[valLen] = '\0';
 
-                                        if (propName == NULL || propValue == NULL)
+                                        if (urldecode)
                                         {
-                                            result = __FAILURE__;
+                                            STRING_HANDLE propName_decoded = URL_DecodeString(propName);
+                                            STRING_HANDLE propValue_decoded = URL_DecodeString(propValue);
+                                            if (propName_decoded == NULL || propValue_decoded == NULL)
+                                            {
+                                                LogError("Failed to URL decode property");
+                                                result = __FAILURE__;
+                                            }
+                                            else if (Map_AddOrUpdate(propertyMap, STRING_c_str(propName_decoded), STRING_c_str(propValue_decoded)) != MAP_OK)
+                                            {
+                                                LogError("Map_AddOrUpdate failed.");
+                                                result = __FAILURE__;
+                                            }
+                                            STRING_delete(propName_decoded);
+                                            STRING_delete(propValue_decoded);
                                         }
                                         else
                                         {
-                                            memcpy(propName, tokenData, nameLen);
-                                            propName[nameLen] = '\0';
-
-                                            memcpy(propValue, iterator + 1, valLen);
-                                            propValue[valLen] = '\0';
-
-                                            if (urldecode)
+                                            if (Map_AddOrUpdate(propertyMap, propName, propValue) != MAP_OK)
                                             {
-                                                STRING_HANDLE propName_decoded = URL_DecodeString(propName);
-                                                STRING_HANDLE propValue_decoded = URL_DecodeString(propValue);
-                                                if (propName_decoded == NULL || propValue_decoded == NULL)
-                                                {
-                                                    LogError("Failed to URL decode property");
-                                                    result = __FAILURE__;
-                                                }
-                                                else if (Map_AddOrUpdate(propertyMap, STRING_c_str(propName_decoded), STRING_c_str(propValue_decoded)) != MAP_OK)
-                                                {
-                                                    LogError("Map_AddOrUpdate failed.");
-                                                    result = __FAILURE__;
-                                                }
-                                                STRING_delete(propName_decoded);
-                                                STRING_delete(propValue_decoded);
-                                            }
-                                            else
-                                            {
-                                                if (Map_AddOrUpdate(propertyMap, propName, propValue) != MAP_OK)
-                                                {
-                                                    LogError("Map_AddOrUpdate failed.");
-                                                    result = __FAILURE__;
-                                                }
+                                                LogError("Map_AddOrUpdate failed.");
+                                                result = __FAILURE__;
                                             }
                                         }
-                                        free(propName);
-                                        free(propValue);
-
-                                        break;
                                     }
-                                    iterator++;
+                                    free(propName);
+                                    free(propValue);
+
+                                    break;
                                 }
+                                iterator++;
                             }
                         }
                     }
-                    STRING_delete(output);
                 }
+                STRING_delete(output);
             }
-            STRING_TOKENIZER_destroy(token);
         }
-        else
-        {
-            LogError("Unable to create Tokenizer object.");
-            result = __FAILURE__;
-        }
-        STRING_delete(mqttTopic);
+        STRING_TOKENIZER_destroy(token);
+    }
+    else
+    {
+        LogError("Unable to create Tokenizer object.");
+        result = __FAILURE__;
     }
     return result;
 }
